@@ -18,8 +18,9 @@ class Table(object):
 
     @staticmethod
     def load_from_path(path):
-        print("Loading...", file=sys.stderr)
+        print("Loading from {0}...".format(os.path.abspath(path)), file=sys.stderr)
         retlist = []
+        curdir = os.path.abspath(os.curdir)
         os.chdir(path)
         files = glob.glob('*.xml')
         count = 0
@@ -31,6 +32,7 @@ class Table(object):
             doc = Table.get_doc_info(root)
             tablelist = Table.get_table_list(root)
             retlist.append(( doc, tablelist ))
+        os.chdir(curdir)
         return retlist
 
     @staticmethod
@@ -49,9 +51,14 @@ class Table(object):
             node = get_single_node(xmlnode, Table.CAPTION_TAG)
             if node is not None:
                 self.caption = node.text
+            else:
+                self.caption = None
+            self.footnote = None
             #node = get_single_node(xmlnode, Table.FOOTNOTE_TAG)
             #if node is not None:
                 #self.footnote = node.text
+            #else:
+                #self.footnote = None
             headers_list = get_cell_rows(xmlnode, Table.HEADERS_TAG, Table.HEADER_TAG)
             rows_list = get_cell_rows(xmlnode, Table.ROW_TAG, Table.VALUE_TAG)
             self.data = [headers_list, rows_list]
