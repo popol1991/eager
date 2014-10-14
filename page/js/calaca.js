@@ -72,10 +72,47 @@ Calaca.factory('calacaService',
     }]
 );
 
-Calaca.factory('renderer', [function() {
+Calaca.factory('aggregate', [function() {
+    function comparer(a, b) {
+        return a['table_id'] - b['table_id'];
+    }
+
+    var group = function(results) {
+        if (results.length == 0 || !('table_id' in results[0])) {
+            return results;
+        }
+        results.sort(comparer);
+        var ret = []
+        var prev = results[0];
+        var i = 1;
+        while (i < results.length) {
+            var cur = results[i];
+            if (cur['table_id'] == prev['table_id']) {
+                for (var key in cur)
+                    if (!(key in prev)) {
+                        prev[key] = cur[key];
+                    }
+            } else {
+                ret.push(prev);
+                prev = cur;
+            }
+            i++;
+        }
+        ret.push(prev);
+        return ret;
+    }
+
+    return {
+        'group' : group
+    }
+}]);
+
+Calaca.factory('renderer', ['aggregate', function(aggregate) {
     var render = function(results) {
         var ret = [];
         var ii = 0;
+        results = aggregate.group(results);
+        console.log(JSON.stringify(results, null, 4));
         for(;ii < results.length; ii++){
             var data = {};
             var table = results[ii];
@@ -91,9 +128,6 @@ Calaca.factory('renderer', [function() {
                     var idx = parseInt(key.split("_").slice(-1));
                     var row = data_rows;
                     var rid = 0, cid = 0;
-                    if (idx > width) {
-                        width = idx;
-                    }
                     if (info[0].search("header_row") != -1) {
                         rid = parseInt(info[0].slice(11));
                         cid = idx;
@@ -117,12 +151,43 @@ Calaca.factory('renderer', [function() {
                             row = data_rows;
                         }
                         rid = idx;
-                        cid = 1;
+                        cid = parseInt(info[0].slice(4));
+                        if (cid > width) {
+                            width = cid;
+                        }
                     }
                     if (row[rid] == undefined) {
                         row[rid] = [];
                     }
                     row[rid][cid] = table[key];
+                }
+            }
+            var empty_cols = [];
+            for (var col = 0; col < width; col++) {
+                var empty = true;
+                for (var row = 0; row < header_rows.length; row++) {
+                    var val = header_rows[row][col];
+                    if (!(val == undefined || val == null)) {
+                        empty = false;
+                    }
+                }
+                for (var row = 0; row < data_rows.length; row++) {
+                    var val = data_rows[row][col];
+                    if (!(val == undefined || val == null)) {
+                        empty = false;
+                    }
+                }
+                if (empty) {
+                    empty_cols.push(col);
+                }
+            }
+            for (var i = empty_cols.length-1; i >= 0; i--) {
+                var col = empty_cols[i];
+                for (var j = 0; j < header_rows.length; j++) {
+                    header_rows[j].splice(col, 1);
+                }
+                for (var j = 0; j < data_rows.length; j++) {
+                    data_rows[j].splice(col, 1);
                 }
             }
             data["data_rows"] = data_rows;
