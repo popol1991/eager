@@ -13,8 +13,11 @@ class Table(object):
     FOOTNOTE_TAG = 'footnote'
     HEADERS_TAG = 'headers'
     HEADER_TAG = 'header'
+    CONTEXT_TAG = 'context'
+    SENTENCE_TAG = 'sentence'
     ROW_TAG = 'row'
     VALUE_TAG = 'value'
+    CE = '{http://www.elsevier.com/xml/common/dtd}'
 
     @staticmethod
     def load_from_path(path):
@@ -44,25 +47,43 @@ class Table(object):
 
     @staticmethod
     def get_doc_info(root):
-        pass
+        doc = {}
+        meta = root.find('metadata')
+        for child in meta:
+            doc[child.tag] = child.text
+        title = root.find('article-title')
+        doc['article-title'] = title.text
+        doc.update(items_from_xml_list(root, 'authors', 'author'))
+        doc.update(items_from_xml_list(root, 'keywords', 'keyword'))
+        return doc
 
     def __init__(self, xmlnode=None):
         if xmlnode is not None:
+            # caption
             node = get_single_node(xmlnode, Table.CAPTION_TAG)
             if node is not None:
                 self.caption = node.text
             else:
                 self.caption = None
             self.footnote = None
-            #node = get_single_node(xmlnode, Table.FOOTNOTE_TAG)
-            #if node is not None:
-                #self.footnote = node.text
-            #else:
-                #self.footnote = None
+            # footnote
+            self.footnotes = []
+            for fn in xmlnode.iter(Table.FOOTNOTE_TAG):
+                self.footnotes.append(fn.text)
+            # context
+            self.citations = []
+            for ctx in xmlnode.iter(Table.CONTEXT_TAG):
+                heading_node = ctx.find('headings/{0}section-title'.format(Table.CE))
+                sentence_node = ctx.find('citation/sentence')
+                heading = heading_node.text if heading_node is not None else None
+                sentence = sentence_node.text if sentence_node is not None else None
+                self.citations.append((heading, sentence))
+            # rows
             headers_list = get_cell_rows(xmlnode, Table.HEADERS_TAG, Table.HEADER_TAG)
             rows_list = get_cell_rows(xmlnode, Table.ROW_TAG, Table.VALUE_TAG)
             self.data = [headers_list, rows_list]
         else:
             self.caption = None
-            self.footnote = None
+            self.footnotes = None
             self.data = None
+            self.citations = None

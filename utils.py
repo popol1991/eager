@@ -17,3 +17,14 @@ def get_cell_rows(node, row_tag, cell_tag):
             celllist.append(Cell(xmlnode=cell))
         retlist.append(celllist)
     return retlist
+
+def items_from_xml_list(root, tag, name):
+    retdict = {}
+    lst = root.find(tag)
+    i = 0
+    for elem in lst:
+        key = '{0}_{1}'.format(name, i)
+        retdict[key] = elem.text
+        i += 1
+    return retdict
+
