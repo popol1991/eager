@@ -15,8 +15,9 @@ var indexName = "table";
 var maxResultsSize = 100000;
 var host = "localhost";
 var port = 9200;
+var metalist = ['caption', 'issue', 'journal', 'issn', 'volume', 'page', 'date', 'article-title']
 var typeFields = {
-    "table" : ["caption", "footnote", "header_row*", "data_row_*.value_0"],
+    "table" : ["caption", "footnote_*", "header_row*", "data_row_*.value_0"],
     "row" : ["header_row*", "data_row_*.value_0"],
     "column" : ["row_header_*", "col_*.header_*"]
 }
@@ -108,17 +109,35 @@ Calaca.factory('aggregate', [function() {
 }]);
 
 Calaca.factory('renderer', ['aggregate', function(aggregate) {
+    function get_list(src, tag) {
+        retlist = [];
+        for (var key in src) {
+            if (key.search(tag) != -1) {
+                idx = parseInt(key.split("_").slice(-1));
+                retlist[idx] = src[key];
+            }
+        }
+        return retlist;
+    }
+
     var render = function(results) {
         var ret = [];
         var ii = 0;
         results = aggregate.group(results);
-        console.log(JSON.stringify(results, null, 4));
         for(;ii < results.length; ii++){
             var data = {};
             var table = results[ii];
-            if ("caption" in table) {
-                data["caption"] = table["caption"];
+            for (var i = 0; i < metalist.length; i++) {
+                var tag = metalist[i];
+                if (tag in table) {
+                    data[tag] = table[tag];
+                }
             }
+            data['authors'] = get_list(table, 'author');
+            data['keywords'] = get_list(table, 'keyword');
+            data['headings'] = get_list(table, 'heading');
+            data['citations'] = get_list(table, 'citation');
+            console.log(JSON.stringify(data, null, 4));
             var width = 0;
             var header_rows = [];
             var data_rows = [];

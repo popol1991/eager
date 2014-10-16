@@ -51,11 +51,12 @@ def get_header_rows(table):
             headers[key] = header.content
     return headers, headrowlist
 
-def get_data_rows(table, headers):
+def get_data_rows(table, global_info, headers):
     """ Get data information from a given table.
 
     arguments:
-        headers -- header information associate with each data row
+        global_info -- global information to be associated with each data row
+        headers -- header information to be associated with each data row
 
     return values:
         datarows -- data rows in dict to update table information
@@ -80,6 +81,7 @@ def get_data_rows(table, headers):
         datarows.update(row)
         row['table_id'] = table_id
         row.update(headers)
+        row.update(global_info)
         action = copy(row_index_template)
         action["_source"] = row
         action["_id"] = row_id
@@ -87,12 +89,13 @@ def get_data_rows(table, headers):
         row_id += 1
     return datarows, datarowlist, actionlist
 
-def get_columns(table, headrowlist, datarowlist):
+def get_columns(table, headrowlist, datarowlist, global_info):
     """ Get columns information from a given table.
 
     arguments:
         headrowlist: header rows
         datarowlist: data rows
+        global_info: global information to be associated with each data column
 
     return values:
         actionlist -- actions for index the columns
@@ -118,6 +121,7 @@ def get_columns(table, headrowlist, datarowlist):
                 list2cells(col_tag, 'valud_', col, datarowlist, i)
                 col['table_id'] = table_id
                 col.update(row_headers)
+                col.update(global_info)
                 action = copy(col_index_template)
                 action["_source"] = col
                 action["_id"] = column_id
@@ -133,22 +137,34 @@ def get_bulk_body(doclist):
     column_actions = []
     for doc, tlist in doclist:
         for table in tlist:
-            table_body = {}
+            global_info = copy(doc)
+            # Header and Footnote
+            if table.caption is not None:
+                global_info[Table.CAPTION_TAG] = table.caption
+            if table.footnotes is not None:
+                i = 0
+                for fn in table.footnotes:
+                    global_info['footnote_{0}'.format(i)] = fn
+                    i += 1
+            # Contexts
+            if table.citations is not None:
+                i = 0
+                for ctx in table.citations:
+                    global_info['heading_{0}'.format(i)] = ctx[0]
+                    global_info['citation_{0}'.format(i)] = ctx[1]
+                    i += 1
             # Header Rows
             headers, headrowlist = get_header_rows(table)
             table_body = copy(headers)
             # Data Rows
-            datarows, datarowlist, actionlist = get_data_rows(table, headers)
+            datarows, datarowlist, actionlist = get_data_rows(table, global_info, headers)
             table_body.update(datarows)
             row_actions += actionlist
             # Data Columns
-            actionlist = get_columns(table, headrowlist, datarowlist)
+            actionlist = get_columns(table, headrowlist, datarowlist, global_info)
             column_actions += actionlist
-            # Header and Footnote
-            if table.caption is not None:
-                table_body[Table.CAPTION_TAG] = table.caption
-            if table.footnote is not None:
-                table_body[Table.FOOTNOTE_TAG] = table.footnote
+            # Table
+            table_body.update(global_info)
             action = copy(table_index_template)
             action["_source"] = table_body
             action["_id"] = table_id
@@ -168,6 +184,9 @@ es = Elasticsearch([
 if es.indices.exists(index=TABLE):
     es.indices.delete(index=TABLE)
 es.indices.create(index=TABLE)
+es.indices.close(index=TABLE)
+es.indices.put_settings(body='{"analysis":{"analyzer":{"default":{"type":"english"}}}}', index=TABLE)
+es.indices.open(index=TABLE)
 
 path = '../Data/test/'
 subfolders = [os.path.join(path, f) for f in os.listdir(path)

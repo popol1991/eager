@@ -31,6 +31,17 @@
     <p class='no-results' ng-hide='results.length'>No Results</p>
     <article class='result' ng-cloak ng-repeat='result in results track by $index'>
       <h2>{{result.caption}}</h2>
+      <h3>From: {{result['article-title']}}</h3>
+      <p>{{result.journal}}, {{result.issn}}, {{result.volume}}, {{result.issue}}, {{result.page}}, {{result.date}}</p>
+      <p ng-hide='result.authors.length<=0'>
+          <b>Authors: </b>
+          <span ng-repeat='author in result.authors track by $index'>{{author}}, </span>
+      </p>
+      <p ng-hide='result.keywords.length<=0'>
+          <b>Keywords: </b>
+          <span ng-repeat='keyword in result.keywords track by $index'>{{keyword}}, </span>
+      </p>
+      <br>
       <table>
           <thead>
           <tr class='header_row' ng-cloak ng_repeat='header_row in result.header_rows track by $index'>
@@ -47,6 +58,8 @@
           </tr>
           </tbody>
       </table>
+      <br>
+      <p ng-repeat='citation in result.citations track by $index'>{{citation}}<br><br></p>
     </article>
   </section>
 </main>
