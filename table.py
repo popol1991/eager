@@ -7,6 +7,9 @@ import xml.etree.ElementTree as ET
 from utils import *
 
 class Table(object):
+    TABLE = 'table'
+    ROW = 'row'
+    COLUMN = 'column'
     """ Represent the content and layout information of a table in documents. """
     TABLE_TAG = 'table'
     CAPTION_TAG = 'caption'

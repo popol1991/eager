@@ -1,3 +1,4 @@
+#! /opt/python27/bin/python
 from __future__ import print_function
 import sys
 import os
@@ -118,7 +119,7 @@ def get_columns(table, headrowlist, datarowlist, global_info):
                 col = {}
                 col_tag = 'col_{0}'.format(i)
                 list2cells(col_tag, 'header_', col, headrowlist, i)
-                list2cells(col_tag, 'valud_', col, datarowlist, i)
+                list2cells(col_tag, 'value_', col, datarowlist, i)
                 col['table_id'] = table_id
                 col.update(row_headers)
                 col.update(global_info)
@@ -178,17 +179,17 @@ def bulk_index(service, actions, unit_name):
 
 
 es = Elasticsearch([
-    {'host': 'localhost'}
+    {'host': 'compute-1-32'}
 ])
 
 if es.indices.exists(index=TABLE):
     es.indices.delete(index=TABLE)
-es.indices.create(index=TABLE)
-es.indices.close(index=TABLE)
-es.indices.put_settings(body='{"analysis":{"analyzer":{"default":{"type":"english"}}}}', index=TABLE)
-es.indices.open(index=TABLE)
+es.indices.create(index=TABLE, body='{"settings":{"index":{"analysis":{"analyzer":{"default":{"type":"english"}}}}}}')
+#es.indices.close(index=TABLE)
+#es.indices.put_settings(body='{"analysis":{"analyzer":{"default":{"type":"english"}}}}', index=TABLE)
+#es.indices.open(index=TABLE)
 
-path = '../Data/test/'
+path = '../data/'
 subfolders = [os.path.join(path, f) for f in os.listdir(path)
               if os.path.isdir(os.path.join(path, f))]
 
